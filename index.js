@@ -35,6 +35,11 @@ const client = new MongoClient(uri, {
 
     // ADD NEW USER
     app.post('/users', async(req,res) => {
+        const email = req.body.email;
+        const existingUser = await userList.findOne({email: email})
+        if(existingUser){
+            return res.send({message:'user already exists', insertedId: null})
+        }
         const result = await userList.insertOne(req.body);
         res.send(result)
     })
