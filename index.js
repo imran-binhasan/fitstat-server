@@ -33,6 +33,15 @@ const client = new MongoClient(uri, {
         res.send(result)
     })
 
+    // GET THE USER
+    app.get('/user', async(req,res) => {
+        const query = req.query.email;
+        const result = await userList.findOne({email:query})
+        res.send(result)
+    })
+
+
+
     // ADD NEW USER
     app.post('/users', async(req,res) => {
         const email = req.body.email;
@@ -47,16 +56,17 @@ const client = new MongoClient(uri, {
     // APPLY FOR TRAINER
     app.patch('/user/:id', async(req,res) => {
         const id = req.params.id;
+        console.log(req.body)
             const result = await userList.updateOne({_id: new ObjectId(id)},{
                 $set:{
                     name:req.body.name,
                     age:req.body.age,
                     skills:req.body.skills,
                     availableDays:req.body.availableDays,
-                    availableSlots:req.body.availableSlots,
+                    availableTimes:req.body.availableTimes,
                     socialLinks:req.body.socialLinks,
                     experience:req.body.experience,
-                    about:req.body.bio,
+                    biodata:req.body.biodata,
                     status:req.body.status
                 }
             })
