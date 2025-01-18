@@ -40,6 +40,12 @@ const client = new MongoClient(uri, {
         res.send(result)
     })
 
+    app.get('/users/applications', async(req,res) => {
+        const result = await userList.find({status: 'pending'}).project({name:1,email:1}).toArray();
+        console.log(result);
+        res.send(result)
+    })
+
 
 
     // ADD NEW USER
