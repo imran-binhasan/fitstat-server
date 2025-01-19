@@ -28,6 +28,7 @@ const client = new MongoClient(uri, {
     const userList = database.collection('userList');
     const classList = database.collection('classList');
     const forumList = database.collection('forumList');
+    const newsLetterSubscribersList = database.collection('newsletter-subscribers-list');
 
     // GET USER DATA
     app.get('/users', async(req,res) => {
@@ -69,8 +70,6 @@ const client = new MongoClient(uri, {
     })
 
 
-
-
      // ADMIN REJECT TRAINER
      app.patch('/application/reject/:id', async(req,res) => {
         const id = req.params.id;
@@ -83,7 +82,7 @@ const client = new MongoClient(uri, {
         res.send(result)
             })
 
-    // ALL TRAINERS ]
+    // ALL TRAINERS 
     app.get('/trainers', async(req, res) => {
         const result = await userList.find({role:'trainer'}).toArray();
         res.send(result)
@@ -137,7 +136,7 @@ const client = new MongoClient(uri, {
 
 
 
-        // FETCH ALL CLASSES
+    // FETCH ALL CLASSES
     app.get('/classes', async(req, res) => {
         result = await classList.find().toArray();
         res.send(result)
@@ -149,9 +148,7 @@ const client = new MongoClient(uri, {
         res.send(result)
     })
 
-
-
-
+  
 
 
     // FETCH ALL FORUMS
@@ -166,6 +163,17 @@ const client = new MongoClient(uri, {
         res.send(result)
     })
 
+    //ADD A NEWSLETTER
+    app.post('/newsletters', async(req, res) => {
+        result = await newsLetterSubscribersList.insertOne(req.body)
+        res.send(result)
+    })
+
+    // FETCH ALL NEWSLETTER DATA
+    app.get('/newsletters', async(req, res) => {
+        result = await newsLetterSubscribersList.find().toArray();
+        res.send(result)
+    })
 
 
 
