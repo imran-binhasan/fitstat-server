@@ -66,13 +66,11 @@ const client = new MongoClient(uri, {
         res.send(result)
     })
 
-    // ALL TRAINERS ]
-    app.get('/trainers', async(req, res) => {
-        const result = await userList.find({role:'trainer'}).toArray()
-    })
 
-    // ADMIN REMOVE TRAINER
-    app.patch('/application/reject/:id', async(req,res) => {
+
+
+     // ADMIN REJECT TRAINER
+     app.patch('/application/reject/:id', async(req,res) => {
         const id = req.params.id;
             const result= await userList.updateOne({_id: new ObjectId(id)},{
                 $set:{
@@ -83,6 +81,27 @@ const client = new MongoClient(uri, {
         res.send(result)
             })
 
+
+
+    // ALL TRAINERS ]
+    app.get('/trainers', async(req, res) => {
+        const result = await userList.find({role:'trainer'}).toArray();
+        res.send(result)
+    })
+
+    // REMOVE A REMOVE
+    app.patch('/trainer/:id', async(req,res) => {
+        const id = req.params.id;
+            const result= await userList.updateOne({_id: new ObjectId(id)},{
+                $set:{
+                    status:req.body.status,
+                    role:req.body.role
+                }
+        })
+        
+        res.send(result)
+            })
+   
 
 
     // ADD NEW USER
