@@ -40,11 +40,48 @@ const client = new MongoClient(uri, {
         res.send(result)
     })
 
+    // GET APPLICATION LISTS
     app.get('/users/applications', async(req,res) => {
         const result = await userList.find({status: 'pending'}).project({name:1,email:1}).toArray();
-        console.log(result);
         res.send(result)
     })
+
+    // GET APPLICATION DETAIL
+    app.get('/users/application/:id', async(req, res) => {
+        const id = req.params.id;
+        const result = await userList.findOne({_id: new ObjectId(id)});
+        res.send(result);
+    })
+
+    // ADMIN APPROVE TRAINER REQ
+    app.patch('/application/accept/:id', async(req,res) => {
+        const id = req.params.id;
+            const result= await userList.updateOne({_id: new ObjectId(id)},{
+                $set:{
+                    status:req.body.status,
+                    role:req.body.role
+                }
+        })
+        
+        res.send(result)
+    })
+
+    // ALL TRAINERS ]
+    app.get('/trainers', async(req, res) => {
+        const result = await userList.find({role:'trainer'}).toArray()
+    })
+
+    // ADMIN REMOVE TRAINER
+    app.patch('/application/reject/:id', async(req,res) => {
+        const id = req.params.id;
+            const result= await userList.updateOne({_id: new ObjectId(id)},{
+                $set:{
+                    status:req.body.status
+                }
+        })
+        
+        res.send(result)
+            })
 
 
 
@@ -79,29 +116,7 @@ const client = new MongoClient(uri, {
             res.send(result)
         })
 
-        // ADMIN APPROVE TRAINER REQ
-    app.patch('/user/promote/:id', async(req,res) => {
-        const id = req.params.id;
-            const result= await userList.updateOne({_id: new ObjectId(id)},{
-                $set:{
-                    status:req.body.status
-                }
-        })
-        
-        res.send(result)
-    })
 
-    // ADMIN REMOVE TRAINER
-    app.patch('/user/demote/:id', async(req,res) => {
-        const id = req.params.id;
-            const result= await userList.updateOne({_id: new ObjectId(id)},{
-                $set:{
-                    status:req.body.status
-                }
-        })
-        
-        res.send(result)
-    })
 
 
     app.listen(port,()=>{
