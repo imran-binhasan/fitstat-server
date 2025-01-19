@@ -26,6 +26,7 @@ const client = new MongoClient(uri, {
 
     const database = client.db('fitstat-db');
     const userList = database.collection('userList');
+    const classList = database.collection('classList');
 
     // GET USER DATA
     app.get('/users', async(req,res) => {
@@ -81,8 +82,6 @@ const client = new MongoClient(uri, {
         res.send(result)
             })
 
-
-
     // ALL TRAINERS ]
     app.get('/trainers', async(req, res) => {
         const result = await userList.find({role:'trainer'}).toArray();
@@ -134,6 +133,30 @@ const client = new MongoClient(uri, {
             })
             res.send(result)
         })
+
+
+
+        // FETCH ALL CLASSES
+    app.get('/classes', async(req, res) => {
+        result = await classList.find().toArray();
+        res.send(result)
+    })
+
+    // ADD A CLASS
+    app.post('/classes', async(req, res) => {
+        result = await classList.insertOne(req.body)
+        res.send(result)
+    })
+
+
+
+
+
+
+
+
+
+
 
 
 
