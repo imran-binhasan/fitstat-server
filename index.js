@@ -27,6 +27,7 @@ const client = new MongoClient(uri, {
     const database = client.db('fitstat-db');
     const userList = database.collection('userList');
     const classList = database.collection('classList');
+    const forumList = database.collection('forumList');
 
     // GET USER DATA
     app.get('/users', async(req,res) => {
@@ -145,6 +146,23 @@ const client = new MongoClient(uri, {
     // ADD A CLASS
     app.post('/classes', async(req, res) => {
         result = await classList.insertOne(req.body)
+        res.send(result)
+    })
+
+
+
+
+
+
+    // FETCH ALL FORUMS
+    app.get('/forums', async(req, res) => {
+        result = await forumList.find().toArray();
+        res.send(result)
+    })
+
+    // ADD A FORUM
+    app.post('/forums', async(req, res) => {
+        result = await forumList.insertOne(req.body)
         res.send(result)
     })
 
