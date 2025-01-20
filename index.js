@@ -137,7 +137,7 @@ const client = new MongoClient(uri, {
                 $set:{
                     name:req.body.name,
                     age:req.body.age,
-                    photoURL:database.photoURL,
+                    photoURL:req.data.photoURL,
                     skills:req.body.skills,
                     availableSlots:req.body.availableSlots,
                     socialLinks:req.body.socialLinks,
