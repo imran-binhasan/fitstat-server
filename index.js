@@ -86,6 +86,21 @@ const client = new MongoClient(uri, {
     app.get('/trainers', async(req, res) => {
         const result = await userList.find({role:'trainer'}).toArray();
         res.send(result)
+    });
+
+    // FETCH CLASS DATA OR TRAINER
+    app.get('/trainers/:name', async(req, res) => {
+        const name = req.params.name.toLowerCase();
+        const result = await userList.find({skills:name}).toArray();
+        console.log(result)
+        res.send(result);
+    })
+
+    // TRAINER DETAILS
+    app.get('/trainer/:id', async(req,res) => {
+        console.log(req.params.id)
+        const result = await userList.find({_id: new ObjectId(req.params.id)}).toArray();
+        res.send(result);
     })
 
     // REMOVE A REMOVE
@@ -122,9 +137,9 @@ const client = new MongoClient(uri, {
                 $set:{
                     name:req.body.name,
                     age:req.body.age,
+                    photoURL:database.photoURL,
                     skills:req.body.skills,
-                    availableDays:req.body.availableDays,
-                    availableTimes:req.body.availableTimes,
+                    availableSlots:req.body.availableSlots,
                     socialLinks:req.body.socialLinks,
                     experience:req.body.experience,
                     biodata:req.body.biodata,
