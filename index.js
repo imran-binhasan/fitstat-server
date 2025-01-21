@@ -75,9 +75,11 @@ const client = new MongoClient(uri, {
         const id = req.params.id;
             const result= await userList.updateOne({_id: new ObjectId(id)},{
                 $set:{
-                    status:req.body.status
+                    status:req.body.status,
+                    feedback:req.body.feedback
                 }
-        })
+        });
+        console.log(req.body)
         
         res.send(result)
             })
@@ -137,7 +139,7 @@ const client = new MongoClient(uri, {
                 $set:{
                     name:req.body.name,
                     age:req.body.age,
-                    photoURL:req.data.photoURL,
+                    photoURL:req.body.photoURL,
                     skills:req.body.skills,
                     availableSlots:req.body.availableSlots,
                     socialLinks:req.body.socialLinks,
