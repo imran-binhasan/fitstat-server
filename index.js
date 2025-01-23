@@ -141,15 +141,53 @@ const client = new MongoClient(uri, {
                     age:req.body.age,
                     photoURL:req.body.photoURL,
                     skills:req.body.skills,
-                    availableSlots:req.body.availableSlots,
-                    socialLinks:req.body.socialLinks,
+                    availableDays:req.body.availableDays,
+                    hoursPerDay:req.body.hoursPerDay,
                     experience:req.body.experience,
+                    socialLinks:req.body.socialLinks,
                     biodata:req.body.biodata,
                     status:req.body.status
                 }
             })
             res.send(result)
         })
+
+        app.patch('/user/slot/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log(req.body);
+        
+            const result = await userList.updateOne(
+                { _id: new ObjectId(id) },
+                {
+                    $push: {
+                        slots: {
+                            selectedClasses: req.body.selectedClasses,
+                            slotName: req.body.slotName,
+                            slotTime: req.body.slotTime,
+                            slotDay: req.body.slotDay,
+                        },
+                    },
+                }
+            );
+        
+            console.log(result);
+            res.send(result);
+        });
+
+        app.patch('/user/slot/remove/:id', async (req, res) => {
+            const id = req.params.id;
+            const slotNameToRemove = req.body.slotNameToRemove;
+            console.log(id,slotNameToRemove)
+        
+            const result = await userList.updateOne(
+                { _id: new ObjectId(id) },
+                { $pull: { slots: { slotName: slotNameToRemove } } }
+              );
+        
+            console.log(result);
+            res.send(result);
+        });
+        
 
 
 
@@ -192,8 +230,14 @@ const client = new MongoClient(uri, {
         res.send(result)
     })
 
-
-
+    // TRAINER DATA FOR BOOKING PAGE
+    app.get('/booking/:id', async(req, res) => {
+        const id = req.params.id
+        result = await userList.findOne({_id: new ObjectId(id)},{projection:{
+            name:1,skills:1
+        }})
+        res.send(result)
+    })
 
 
 
