@@ -2,14 +2,16 @@ const express = require('express');
 const cors = require('cors');
 const {configDotenv} = require('dotenv');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const { availableMemory } = require('process');
-
+const jwt = require('jsonwebtoken');
+const { error } = require('console');
+configDotenv()
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const app = express();
 app.use(express.json());
 app.use(cors());
 
 const port = process.env.PORT || 4000;
-configDotenv()
+
 
 const uri = process.env.CONNECTION_STRING;
 
@@ -24,40 +26,74 @@ const client = new MongoClient(uri, {
   async function run() {
     try {
 
+
+
     const database = client.db('fitstat-db');
     const userList = database.collection('userList');
     const classList = database.collection('classList');
     const forumList = database.collection('forumList');
-    const newsLetterSubscribersList = database.collection('newsletter-subscribers-list');
+    const newsLetterSubscriberList = database.collection('subscriberList');
+    const paymentList = database.collection('paymentList');
+    const reviewList = database.collection('reviewList')
+
+
+    // JWT
+
+    app.post('/jwt', async(req, res) => {
+        const user = req.body;
+        const token = jwt.sign(user, process.env.JWT_SECRET,{expiresIn:'4h'})
+        console.log(token)
+        res.send(token)
+    })
+
+    // MIDDLEWARE
+    const verifyToken = (req, res, next) => {
+        if(!req.headers.authorization){
+            return res.status(401).send({message:'forbidden access'})
+        }
+        const token = req.headers.authorization.split(' ')[1];
+        jwt.verify(token, process.env.JWT_SECRET,(err, decoded) => {
+            if(err){
+                return res.status(401).send({message:'forbidden access'})
+            }
+            req.decoded = decoded;
+            next()
+        })
+    }
+
+
+
+
+
 
     // GET USER DATA
-    app.get('/users', async(req,res) => {
+    app.get('/users',verifyToken, async(req,res) => {
         const result = await userList.find().toArray();
         res.send(result)
     })
 
     // GET THE USER
-    app.get('/user', async(req,res) => {
+    app.get('/user',verifyToken, async(req,res) => {
         const query = req.query.email;
         const result = await userList.findOne({email:query})
         res.send(result)
     })
 
     // GET APPLICATION LISTS
-    app.get('/users/applications', async(req,res) => {
+    app.get('/users/applications',verifyToken, async(req,res) => {
         const result = await userList.find({status: 'pending'}).project({name:1,email:1}).toArray();
         res.send(result)
     })
 
     // GET APPLICATION DETAIL
-    app.get('/users/application/:id', async(req, res) => {
+    app.get('/users/application/:id',verifyToken, async(req, res) => {
         const id = req.params.id;
         const result = await userList.findOne({_id: new ObjectId(id)});
         res.send(result);
     })
 
     // ADMIN APPROVE TRAINER REQ
-    app.patch('/application/accept/:id', async(req,res) => {
+    app.patch('/application/accept/:id',verifyToken, async(req,res) => {
         const id = req.params.id;
             const result= await userList.updateOne({_id: new ObjectId(id)},{
                 $set:{
@@ -71,7 +107,7 @@ const client = new MongoClient(uri, {
 
 
      // ADMIN REJECT TRAINER
-     app.patch('/application/reject/:id', async(req,res) => {
+     app.patch('/application/reject/:id',verifyToken, async(req,res) => {
         const id = req.params.id;
             const result= await userList.updateOne({_id: new ObjectId(id)},{
                 $set:{
@@ -79,7 +115,6 @@ const client = new MongoClient(uri, {
                     feedback:req.body.feedback
                 }
         });
-        console.log(req.body)
         
         res.send(result)
             })
@@ -91,22 +126,24 @@ const client = new MongoClient(uri, {
     });
 
     // FETCH CLASS DATA OR TRAINER
-    app.get('/trainers/:name', async(req, res) => {
-        const name = req.params.name.toLowerCase();
-        const result = await userList.find({skills:name}).toArray();
-        console.log(result)
+    app.get('/trainers/:name', async (req, res) => {
+        const name = req.params.name;
+        
+        const result = await userList.find({
+            "slots.selectedClasses.label": { $regex: new RegExp(name, "i") } 
+        }).toArray();
+    
         res.send(result);
-    })
+    });    
 
     // TRAINER DETAILS
     app.get('/trainer/:id', async(req,res) => {
-        console.log(req.params.id)
         const result = await userList.find({_id: new ObjectId(req.params.id)}).toArray();
         res.send(result);
     })
 
-    // REMOVE A REMOVE
-    app.patch('/trainer/:id', async(req,res) => {
+    // REMOVE A TRAINER
+    app.patch('/trainer/:id',verifyToken, async(req,res) => {
         const id = req.params.id;
             const result= await userList.updateOne({_id: new ObjectId(id)},{
                 $set:{
@@ -132,9 +169,8 @@ const client = new MongoClient(uri, {
     })
 
     // APPLY FOR TRAINER
-    app.patch('/user/:id', async(req,res) => {
+    app.patch('/user/:id',verifyToken, async(req,res) => {
         const id = req.params.id;
-        console.log(req.body)
             const result = await userList.updateOne({_id: new ObjectId(id)},{
                 $set:{
                     name:req.body.name,
@@ -152,9 +188,8 @@ const client = new MongoClient(uri, {
             res.send(result)
         })
 
-        app.patch('/user/slot/:id', async (req, res) => {
+        app.patch('/user/slot/:id',verifyToken, async (req, res) => {
             const id = req.params.id;
-            console.log(req.body);
         
             const result = await userList.updateOne(
                 { _id: new ObjectId(id) },
@@ -169,22 +204,18 @@ const client = new MongoClient(uri, {
                     },
                 }
             );
-        
-            console.log(result);
             res.send(result);
         });
 
-        app.patch('/user/slot/remove/:id', async (req, res) => {
+        app.patch('/user/slot/remove/:id',verifyToken, async (req, res) => {
             const id = req.params.id;
             const slotNameToRemove = req.body.slotNameToRemove;
-            console.log(id,slotNameToRemove)
         
             const result = await userList.updateOne(
                 { _id: new ObjectId(id) },
                 { $pull: { slots: { slotName: slotNameToRemove } } }
               );
         
-            console.log(result);
             res.send(result);
         });
         
@@ -198,10 +229,21 @@ const client = new MongoClient(uri, {
     })
 
     // ADD A CLASS
-    app.post('/classes', async(req, res) => {
+    app.post('/classes',verifyToken, async(req, res) => {
         result = await classList.insertOne(req.body)
         res.send(result)
     })
+
+    // ADD COUNT OF CLASS BOOKING
+    app.patch('/class/:id',verifyToken, async(req, res) => {
+        const id = req.params.id
+        const result = await classList.updateOne(
+            { _id: new ObjectId(id) },
+            { $inc: { bookingCount: 1 } } 
+        );
+        res.send(result)
+    })
+
 
   
 
@@ -213,20 +255,20 @@ const client = new MongoClient(uri, {
     })
 
     // ADD A FORUM
-    app.post('/forums', async(req, res) => {
+    app.post('/forums',verifyToken, async(req, res) => {
         result = await forumList.insertOne(req.body)
         res.send(result)
     })
 
     //ADD A NEWSLETTER
-    app.post('/newsletters', async(req, res) => {
-        result = await newsLetterSubscribersList.insertOne(req.body)
+    app.post('/newsletters',verifyToken, async(req, res) => {
+        result = await newsLetterSubscriberList.insertOne(req.body)
         res.send(result)
     })
 
     // FETCH ALL NEWSLETTER DATA
-    app.get('/newsletters', async(req, res) => {
-        result = await newsLetterSubscribersList.find().toArray();
+    app.get('/newsletters',verifyToken, async(req, res) => {
+        result = await newsLetterSubscriberList.find().toArray();
         res.send(result)
     })
 
@@ -234,15 +276,76 @@ const client = new MongoClient(uri, {
     app.get('/booking/:id', async(req, res) => {
         const id = req.params.id
         result = await userList.findOne({_id: new ObjectId(id)},{projection:{
-            name:1,skills:1
+            name:1,skills:1,email:1
         }})
         res.send(result)
     })
 
 
 
+    // PAYMENT
+    app.post('/create-payment-intent',verifyToken, async(req, res) => {
+        const price = req.body.price;
+        const amount = parseInt(price*100)
+        const paymentIntent =await stripe.paymentIntents.create({
+            amount:amount,
+            currency:'usd',
+            payment_method_types: ['card']
+        });
+
+        res.send({client_secret: paymentIntent.client_secret})
+    })
+
+    app.post('/payments', async(req, res) => {
+        const paymentInfo = req.body;
+        const result =await paymentList.insertOne(paymentInfo);
+        res.send(result)
+    })
+
+    app.get('/payments',verifyToken, async(req, res) => {
+        const result = await paymentList.find().toArray();
+        res.send(result)
+    })
+
+    app.get('/payment', async(req, res) => {
+        const result = await paymentList.findOne({userEmail:req.query.email});
+        res.send(result)
+    })
 
 
+    // ADD REVIEW
+    app.post('/reviews', async(req,res) => {
+        const result = await reviewList.insertOne(req.body);
+        res.send(result)
+    })
+
+
+    // GET REVIEWS
+    app.get('/reviews', async(req,res) => {
+        const result = await reviewList.find().toArray();
+        res.send(result)
+    })
+
+    // GET SINGLE REVIEW
+    app.get('/reviews', async(req,res) => {
+        const result = await reviewList.findOne({userEmail:req.query.email});
+        res.send(result)
+    })
+
+
+    // VERIFY AUTHENTICATION
+    app.get('/auth',verifyToken, async(req, res) => {
+        const userInfo = await userList.findOne({email:req.query.email})
+        const role = userInfo?.role;
+        res.send(role)
+
+    })
+
+    app.get('/state', async(req,res) => {
+        // const memberCount =await userList.find({role:'member'}).estimatedDocumentCount;
+        // const bookingCount = await paymentList.estimatedDocumentCount();
+        // res.json({totalUsers:userCount,totalBookings:bookingCount})
+    })
 
 
 
