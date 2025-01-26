@@ -44,7 +44,7 @@ async function run() {
     // MIDDLEWARE
     const verifyToken = (req, res, next) => {
       if (!req.headers.authorization) {
-        return res.status(401).send({ message: "forbidden access" });
+        return res.status(401).send({ message: "forbidden access " });
       }
       const token = req.headers.authorization.split(" ")[1];
       jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
@@ -236,22 +236,23 @@ async function run() {
 
 
     // FETCH CLASSES WITH SEARCH
-app.get("/classes", async (req, res) => {
-  const { search } = req.query;  // Extract search query from the URL
+    app.get("/classes", async (req, res) => {
+      const { search = "", page = 1, limit = 6 } = req.query;
+      const skip = (page - 1) * limit;
   
-  let result;
-  if (search) {
-    // Perform a case-insensitive search using a regular expression
-    result = await classList.find({
-      name: { $regex: search, $options: "i" },  // 'i' flag for case-insensitive search
-    }).toArray();
-  } else {
-    // If no search query, return all classes
-    result = await classList.find().toArray();
-  }
+      let query = search ? { name: { $regex: search, $options: "i" } } : {};
   
-  res.send(result);
-});
+      const total = await classList.countDocuments(query); // Get total count for pagination
+      const result = await classList.find(query).skip(skip).limit(parseInt(limit)).toArray();
+      res.send({ total, classes: result });
+  });
+
+  app.get('/classes/all', async(req,res) =>{
+    const result = await classList.find().toArray();
+    res.send(result)
+  })
+  
+    
 
     // ADD A CLASS
     app.post("/classes", verifyToken, async (req, res) => {
@@ -333,7 +334,7 @@ app.get("/classes", async (req, res) => {
     });
 
     //ADD A NEWSLETTER
-    app.post("/newsletters", verifyToken, async (req, res) => {
+    app.post("/newsletters", async (req, res) => {
       result = await newsLetterSubscriberList.insertOne(req.body);
       res.send(result);
     });
@@ -426,15 +427,77 @@ app.get("/classes", async (req, res) => {
       res.send(result);
     });
 
+
+
+
+
+
+
+
+    // DASHBOARD
     app.get("/state", async (req, res) => {
-      // const memberCount =await userList.find({role:'member'}).estimatedDocumentCount;
-      // const bookingCount = await paymentList.estimatedDocumentCount();
-      // res.json({totalUsers:userCount,totalBookings:bookingCount})
+      try {
+        const memberCount = await userList.countDocuments({ role: 'member' });
+        const bookingCount = await paymentList.estimatedDocumentCount();
+    
+        const totalPaymentPrice = await paymentList.aggregate([
+          {
+            $match: { packagePrice: { $exists: true, $ne: null } }
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$packagePrice" }
+            }
+          }
+        ]).toArray(); // Add .toArray() to ensure compatibility
+    
+        const totalPayment = totalPaymentPrice[0]?.total || 0;
+        const transactions = await paymentList.find().sort({_id: -1}).toArray();
+        const subscribers = await newsLetterSubscriberList.estimatedDocumentCount();
+        const paidMembers = await paymentList.aggregate([
+          {
+            $group: {
+              _id: "$userEmail", // Group by userEmail (this will group payments by unique members)
+            },
+          },
+          {
+            $count: "uniqueMemberCount", // Count the number of unique groups (members)
+          },
+        ]).toArray();
+        res.json({
+          totalUsers: memberCount,
+          totalBookings: bookingCount,
+          totalPayment: totalPayment,
+          transactions:transactions,
+          subscribers:subscribers,
+          paidMembers:paidMembers[0].uniqueMemberCount
+        });
+      } catch (error) {
+        console.error("Error fetching state data:", error);
+        res.status(500).json({ error: "An error occurred while fetching state data." });
+      }
+    });
+    
+    
+
+    app.get('/booked-slot', async (req, res) => {
+      const classId = req.query.classId;  // This will be one `classId` at a time
+      console.log(req.query);
+    
+      // Find the result for this specific `classId`
+      const result = await paymentList.find({ classId: classId }).toArray();
+      res.send(result);
     });
 
     app.listen(port, () => {
       console.log(`Listening on port : ${port}`);
     });
+
+
+
+
+
 
     await client.connect();
     await client.db("admin").command({ ping: 1 });
