@@ -1,366 +1,448 @@
-const express = require('express');
-const cors = require('cors');
-const {configDotenv} = require('dotenv');
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const jwt = require('jsonwebtoken');
-const { error } = require('console');
-configDotenv()
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const express = require("express");
+const cors = require("cors");
+const { configDotenv } = require("dotenv");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const jwt = require("jsonwebtoken");
+const { error } = require("console");
+configDotenv();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const app = express();
 app.use(express.json());
 app.use(cors());
 
 const port = process.env.PORT || 4000;
 
-
 const uri = process.env.CONNECTION_STRING;
 
 const client = new MongoClient(uri, {
-    serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true,
-    }
-  });
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+});
 
-  async function run() {
-    try {
-
-
-
-    const database = client.db('fitstat-db');
-    const userList = database.collection('userList');
-    const classList = database.collection('classList');
-    const forumList = database.collection('forumList');
-    const newsLetterSubscriberList = database.collection('subscriberList');
-    const paymentList = database.collection('paymentList');
-    const reviewList = database.collection('reviewList')
-
+async function run() {
+  try {
+    const database = client.db("fitstat-db");
+    const userList = database.collection("userList");
+    const classList = database.collection("classList");
+    const forumList = database.collection("forumList");
+    const newsLetterSubscriberList = database.collection("subscriberList");
+    const paymentList = database.collection("paymentList");
+    const reviewList = database.collection("reviewList");
 
     // JWT
 
-    app.post('/jwt', async(req, res) => {
-        const user = req.body;
-        const token = jwt.sign(user, process.env.JWT_SECRET,{expiresIn:'4h'})
-        console.log(token)
-        res.send(token)
-    })
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "4h" });
+      console.log(token);
+      res.send(token);
+    });
 
     // MIDDLEWARE
     const verifyToken = (req, res, next) => {
-        if(!req.headers.authorization){
-            return res.status(401).send({message:'forbidden access'})
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "forbidden access" });
+      }
+      const token = req.headers.authorization.split(" ")[1];
+      jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: "forbidden access" });
         }
-        const token = req.headers.authorization.split(' ')[1];
-        jwt.verify(token, process.env.JWT_SECRET,(err, decoded) => {
-            if(err){
-                return res.status(401).send({message:'forbidden access'})
-            }
-            req.decoded = decoded;
-            next()
-        })
-    }
-
-
-
-
-
+        req.decoded = decoded;
+        next();
+      });
+    };
 
     // GET USER DATA
-    app.get('/users',verifyToken, async(req,res) => {
-        const result = await userList.find().toArray();
-        res.send(result)
-    })
+    app.get("/users", verifyToken, async (req, res) => {
+      const result = await userList.find().toArray();
+      res.send(result);
+    });
 
     // GET THE USER
-    app.get('/user',verifyToken, async(req,res) => {
-        const query = req.query.email;
-        const result = await userList.findOne({email:query})
-        res.send(result)
-    })
+    app.get("/user", verifyToken, async (req, res) => {
+      const query = req.query.email;
+      const result = await userList.findOne({ email: query });
+      res.send(result);
+    });
 
     // GET APPLICATION LISTS
-    app.get('/users/applications',verifyToken, async(req,res) => {
-        const result = await userList.find({status: 'pending'}).project({name:1,email:1}).toArray();
-        res.send(result)
-    })
+    app.get("/users/applications", verifyToken, async (req, res) => {
+      const result = await userList
+        .find({ status: "pending" })
+        .project({ name: 1, email: 1 })
+        .toArray();
+      res.send(result);
+    });
 
     // GET APPLICATION DETAIL
-    app.get('/users/application/:id',verifyToken, async(req, res) => {
-        const id = req.params.id;
-        const result = await userList.findOne({_id: new ObjectId(id)});
-        res.send(result);
-    })
+    app.get("/users/application/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const result = await userList.findOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
 
     // ADMIN APPROVE TRAINER REQ
-    app.patch('/application/accept/:id',verifyToken, async(req,res) => {
-        const id = req.params.id;
-            const result= await userList.updateOne({_id: new ObjectId(id)},{
-                $set:{
-                    status:req.body.status,
-                    role:req.body.role
-                }
-        })
-        
-        res.send(result)
-    })
+    app.patch("/application/accept/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const result = await userList.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            status: req.body.status,
+            role: req.body.role,
+          },
+        }
+      );
 
+      res.send(result);
+    });
 
-     // ADMIN REJECT TRAINER
-     app.patch('/application/reject/:id',verifyToken, async(req,res) => {
-        const id = req.params.id;
-            const result= await userList.updateOne({_id: new ObjectId(id)},{
-                $set:{
-                    status:req.body.status,
-                    feedback:req.body.feedback
-                }
-        });
-        
-        res.send(result)
-            })
+    // ADMIN REJECT TRAINER
+    app.patch("/application/reject/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const result = await userList.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            status: req.body.status,
+            feedback: req.body.feedback,
+          },
+        }
+      );
 
-    // ALL TRAINERS 
-    app.get('/trainers', async(req, res) => {
-        const result = await userList.find({role:'trainer'}).toArray();
-        res.send(result)
+      res.send(result);
+    });
+
+    // ALL TRAINERS
+    app.get("/trainers", async (req, res) => {
+      const result = await userList.find({ role: "trainer" }).toArray();
+      res.send(result);
+    });
+
+    // 3 TRAINERS ONLY
+    app.get("/trainers/team", async (req, res) => {
+      const result = await userList
+        .find({ role: "trainer" })
+        .limit(3)
+        .toArray();
+      res.send(result);
     });
 
     // FETCH CLASS DATA OR TRAINER
-    app.get('/trainers/:name', async (req, res) => {
-        const name = req.params.name;
-        
-        const result = await userList.find({
-            "slots.selectedClasses.label": { $regex: new RegExp(name, "i") } 
-        }).toArray();
-    
-        res.send(result);
-    });    
+    app.get("/trainers/:name", async (req, res) => {
+      const name = req.params.name;
+
+      const result = await userList
+        .find({
+          "slots.selectedClasses.label": { $regex: new RegExp(name, "i") },
+        })
+        .toArray();
+
+      res.send(result);
+    });
 
     // TRAINER DETAILS
-    app.get('/trainer/:id', async(req,res) => {
-        const result = await userList.find({_id: new ObjectId(req.params.id)}).toArray();
-        res.send(result);
-    })
+    app.get("/trainer/:id", async (req, res) => {
+      const result = await userList
+        .find({ _id: new ObjectId(req.params.id) })
+        .toArray();
+      res.send(result);
+    });
 
     // REMOVE A TRAINER
-    app.patch('/trainer/:id',verifyToken, async(req,res) => {
-        const id = req.params.id;
-            const result= await userList.updateOne({_id: new ObjectId(id)},{
-                $set:{
-                    status:req.body.status,
-                    role:req.body.role
-                }
-        })
-        
-        res.send(result)
-            })
-   
+    app.patch("/trainer/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const result = await userList.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            status: req.body.status,
+            role: req.body.role,
+          },
+        }
+      );
 
+      res.send(result);
+    });
 
     // ADD NEW USER
-    app.post('/users', async(req,res) => {
-        const email = req.body.email;
-        const existingUser = await userList.findOne({email: email})
-        if(existingUser){
-            return res.send({message:'user already exists', insertedId: null})
-        }
-        const result = await userList.insertOne(req.body);
-        res.send(result)
-    })
+    app.post("/users", async (req, res) => {
+      const email = req.body.email;
+      const existingUser = await userList.findOne({ email: email });
+      if (existingUser) {
+        return res.send({ message: "user already exists", insertedId: null });
+      }
+      const result = await userList.insertOne(req.body);
+      res.send(result);
+    });
 
     // APPLY FOR TRAINER
-    app.patch('/user/:id',verifyToken, async(req,res) => {
-        const id = req.params.id;
-            const result = await userList.updateOne({_id: new ObjectId(id)},{
-                $set:{
-                    name:req.body.name,
-                    age:req.body.age,
-                    photoURL:req.body.photoURL,
-                    skills:req.body.skills,
-                    availableDays:req.body.availableDays,
-                    hoursPerDay:req.body.hoursPerDay,
-                    experience:req.body.experience,
-                    socialLinks:req.body.socialLinks,
-                    biodata:req.body.biodata,
-                    status:req.body.status
-                }
-            })
-            res.send(result)
-        })
+    app.patch("/user/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const result = await userList.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            name: req.body.name,
+            age: req.body.age,
+            photoURL: req.body.photoURL,
+            skills: req.body.skills,
+            availableDays: req.body.availableDays,
+            hoursPerDay: req.body.hoursPerDay,
+            experience: req.body.experience,
+            socialLinks: req.body.socialLinks,
+            biodata: req.body.biodata,
+            status: req.body.status,
+          },
+        }
+      );
+      res.send(result);
+    });
 
-        app.patch('/user/slot/:id',verifyToken, async (req, res) => {
-            const id = req.params.id;
-        
-            const result = await userList.updateOne(
-                { _id: new ObjectId(id) },
-                {
-                    $push: {
-                        slots: {
-                            selectedClasses: req.body.selectedClasses,
-                            slotName: req.body.slotName,
-                            slotTime: req.body.slotTime,
-                            slotDay: req.body.slotDay,
-                        },
-                    },
-                }
-            );
-            res.send(result);
-        });
+    app.patch("/user/slot/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
 
-        app.patch('/user/slot/remove/:id',verifyToken, async (req, res) => {
-            const id = req.params.id;
-            const slotNameToRemove = req.body.slotNameToRemove;
-        
-            const result = await userList.updateOne(
-                { _id: new ObjectId(id) },
-                { $pull: { slots: { slotName: slotNameToRemove } } }
-              );
-        
-            res.send(result);
-        });
-        
+      const result = await userList.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $push: {
+            slots: {
+              selectedClasses: req.body.selectedClasses,
+              slotName: req.body.slotName,
+              slotTime: req.body.slotTime,
+              slotDay: req.body.slotDay,
+            },
+          },
+        }
+      );
+      res.send(result);
+    });
 
+    app.patch("/user/slot/remove/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const slotNameToRemove = req.body.slotNameToRemove;
+
+      const result = await userList.updateOne(
+        { _id: new ObjectId(id) },
+        { $pull: { slots: { slotName: slotNameToRemove } } }
+      );
+
+      res.send(result);
+    });
 
 
-    // FETCH ALL CLASSES
-    app.get('/classes', async(req, res) => {
-        result = await classList.find().toArray();
-        res.send(result)
-    })
+    // FETCH CLASSES WITH SEARCH
+app.get("/classes", async (req, res) => {
+  const { search } = req.query;  // Extract search query from the URL
+  
+  let result;
+  if (search) {
+    // Perform a case-insensitive search using a regular expression
+    result = await classList.find({
+      name: { $regex: search, $options: "i" },  // 'i' flag for case-insensitive search
+    }).toArray();
+  } else {
+    // If no search query, return all classes
+    result = await classList.find().toArray();
+  }
+  
+  res.send(result);
+});
 
     // ADD A CLASS
-    app.post('/classes',verifyToken, async(req, res) => {
-        result = await classList.insertOne(req.body)
-        res.send(result)
-    })
+    app.post("/classes", verifyToken, async (req, res) => {
+      result = await classList.insertOne(req.body);
+      res.send(result);
+    });
 
     // ADD COUNT OF CLASS BOOKING
-    app.patch('/class/:id',verifyToken, async(req, res) => {
-        const id = req.params.id
-        const result = await classList.updateOne(
-            { _id: new ObjectId(id) },
-            { $inc: { bookingCount: 1 } } 
-        );
-        res.send(result)
-    })
-
-
-  
-
+    app.patch("/class/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const result = await classList.updateOne(
+        { _id: new ObjectId(id) },
+        { $inc: { bookingCount: 1 } }
+      );
+      res.send(result);
+    });
 
     // FETCH ALL FORUMS
-    app.get('/forums', async(req, res) => {
-        result = await forumList.find().toArray();
-        res.send(result)
-    })
+    app.get("/forums", async (req, res) => {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 6;
+      const skip = (page - 1) * limit;
+
+      try {
+        const totalPosts = await forumList.countDocuments();
+        console.log(totalPosts);
+        const posts = await forumList.find().skip(skip).limit(limit).toArray();
+        res.json({
+          totalPosts,
+          totalPages: Math.ceil(totalPosts / limit),
+          currentPage: page,
+          posts: posts,
+        });
+      } catch (err) {
+        res.status(500).json({ message: "Server error", error: err });
+      }
+    });
+
+    // LATEST 6 POSTS
+    app.get("/forums/latest", async (req, res) => {
+      const result = await forumList
+        .find()
+        .sort({ voteCount: -1 })
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
+
+    app.patch("/forum/upvote/:id", async (req, res) => {
+      const result = await forumList.updateOne(
+        { _id: new ObjectId(req.params.id) },
+        {
+          $inc: {
+            voteCount: 1,
+          },
+        }
+      );
+      console.log(result);
+      res.send(result);
+    });
+
+    app.patch("/forum/downvote/:id", async (req, res) => {
+      const result = await forumList.updateOne(
+        { _id: new ObjectId(req.params.id) },
+        {
+          $inc: {
+            voteCount: -1,
+          },
+        }
+      );
+      console.log(result);
+      res.send(result);
+    });
 
     // ADD A FORUM
-    app.post('/forums',verifyToken, async(req, res) => {
-        result = await forumList.insertOne(req.body)
-        res.send(result)
-    })
+    app.post("/forums", verifyToken, async (req, res) => {
+      result = await forumList.insertOne(req.body);
+      res.send(result);
+    });
 
     //ADD A NEWSLETTER
-    app.post('/newsletters',verifyToken, async(req, res) => {
-        result = await newsLetterSubscriberList.insertOne(req.body)
-        res.send(result)
-    })
+    app.post("/newsletters", verifyToken, async (req, res) => {
+      result = await newsLetterSubscriberList.insertOne(req.body);
+      res.send(result);
+    });
 
     // FETCH ALL NEWSLETTER DATA
-    app.get('/newsletters',verifyToken, async(req, res) => {
-        result = await newsLetterSubscriberList.find().toArray();
-        res.send(result)
-    })
+    app.get("/newsletters", verifyToken, async (req, res) => {
+      result = await newsLetterSubscriberList.find().toArray();
+      res.send(result);
+    });
 
     // TRAINER DATA FOR BOOKING PAGE
-    app.get('/booking/:id', async(req, res) => {
-        const id = req.params.id
-        result = await userList.findOne({_id: new ObjectId(id)},{projection:{
-            name:1,skills:1,email:1
-        }})
-        res.send(result)
-    })
-
-
+    app.get("/booking/:id", async (req, res) => {
+      const id = req.params.id;
+      result = await userList.findOne(
+        { _id: new ObjectId(id) },
+        {
+          projection: {
+            name: 1,
+            skills: 1,
+            email: 1,
+          },
+        }
+      );
+      res.send(result);
+    });
 
     // PAYMENT
-    app.post('/create-payment-intent',verifyToken, async(req, res) => {
-        const price = req.body.price;
-        const amount = parseInt(price*100)
-        const paymentIntent =await stripe.paymentIntents.create({
-            amount:amount,
-            currency:'usd',
-            payment_method_types: ['card']
-        });
+    app.post("/create-payment-intent", verifyToken, async (req, res) => {
+      const price = req.body.price;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
 
-        res.send({client_secret: paymentIntent.client_secret})
-    })
+      res.send({ client_secret: paymentIntent.client_secret });
+    });
 
-    app.post('/payments', async(req, res) => {
-        const paymentInfo = req.body;
-        const result =await paymentList.insertOne(paymentInfo);
-        res.send(result)
-    })
+    app.post("/payments", async (req, res) => {
+      const paymentInfo = req.body;
+      const result = await paymentList.insertOne(paymentInfo);
+      res.send(result);
+    });
 
-    app.get('/payments',verifyToken, async(req, res) => {
-        const result = await paymentList.find().toArray();
-        res.send(result)
-    })
+    app.get("/payments", verifyToken, async (req, res) => {
+      const result = await paymentList.find().toArray();
+      res.send(result);
+    });
 
-    app.get('/payment', async(req, res) => {
-        const result = await paymentList.findOne({userEmail:req.query.email});
-        res.send(result)
-    })
-
+    app.get("/payment", async (req, res) => {
+      const result = await paymentList.findOne({ userEmail: req.query.email });
+      res.send(result);
+    });
 
     // ADD REVIEW
-    app.post('/reviews', async(req,res) => {
-        const result = await reviewList.insertOne(req.body);
-        res.send(result)
-    })
-
+    app.post("/reviews", async (req, res) => {
+      const result = await reviewList.insertOne(req.body);
+      res.send(result);
+    });
 
     // GET REVIEWS
-    app.get('/reviews', async(req,res) => {
-        const result = await reviewList.find().toArray();
-        res.send(result)
-    })
+    app.get("/reviews", async (req, res) => {
+      const result = await reviewList.find().toArray();
+      res.send(result);
+    });
 
     // GET SINGLE REVIEW
-    app.get('/reviews', async(req,res) => {
-        const result = await reviewList.findOne({userEmail:req.query.email});
-        res.send(result)
-    })
-
+    app.get("/review", async (req, res) => {
+      const result = await reviewList.findOne({ userEmail: req.query.email });
+      console.log(result);
+      res.send(result);
+    });
 
     // VERIFY AUTHENTICATION
-    app.get('/auth',verifyToken, async(req, res) => {
-        const userInfo = await userList.findOne({email:req.query.email})
-        const role = userInfo?.role;
-        res.send(role)
+    app.get("/auth", verifyToken, async (req, res) => {
+      const userInfo = await userList.findOne({ email: req.query.email });
+      const role = userInfo?.role;
+      res.send(role);
+    });
 
-    })
+    // POPULAR CLASSES
 
-    app.get('/state', async(req,res) => {
-        // const memberCount =await userList.find({role:'member'}).estimatedDocumentCount;
-        // const bookingCount = await paymentList.estimatedDocumentCount();
-        // res.json({totalUsers:userCount,totalBookings:bookingCount})
-    })
+    app.get("/classes/popular", async (req, res) => {
+      const result = await classList
+        .find()
+        .sort({ bookingCount: -1 })
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
 
+    app.get("/state", async (req, res) => {
+      // const memberCount =await userList.find({role:'member'}).estimatedDocumentCount;
+      // const bookingCount = await paymentList.estimatedDocumentCount();
+      // res.json({totalUsers:userCount,totalBookings:bookingCount})
+    });
 
+    app.listen(port, () => {
+      console.log(`Listening on port : ${port}`);
+    });
 
-
-
-    app.listen(port,()=>{
-        console.log(`Listening on port : ${port}`);
-    })
-      
-      await client.connect();
-      await client.db("admin").command({ ping: 1 });
-      console.log("Pinged your deployment. You successfully connected to MongoDB!");
-    } finally {
-      
+    await client.connect();
+    await client.db("admin").command({ ping: 1 });
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
+  } finally {
     //   await client.close();
-    }
   }
-  run().catch(console.dir);
+}
+run().catch(console.dir);
