@@ -7,7 +7,7 @@ FitStat is a fitness tracking website where users can track their workouts, acce
 
 ## Live Site URL
 
-- **Live Website:** [https://fitstat.vercel.app](https://fitstat.vercel.app) 
+- **Live Website:** [https://fistat.vercel.app](https://fistat.vercel.app) 
 
 ## Features
 
