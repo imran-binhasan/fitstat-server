@@ -345,6 +345,15 @@ async function run() {
       res.send(result);
     });
 
+
+    // REMOVE ONE NEWSLETTER DATA
+    app.delete("/newsletters", verifyToken, async (req, res) => {
+      result = await newsLetterSubscriberList.deleteOne({email:req.query.email});
+      res.send(result);
+    });
+
+
+
     // TRAINER DATA FOR BOOKING PAGE
     app.get("/booking/:id", async (req, res) => {
       const id = req.params.id;
