@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+    networks:
+      - fitstat-network
+
+  mongodb:
+    image: mongo:6.0
+    container_name: fitstat-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: fitstat-db
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - fitstat-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  fitstat-network:
+    driver: bridge
