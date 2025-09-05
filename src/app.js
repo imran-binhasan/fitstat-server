@@ -124,24 +124,103 @@ class App {
     // Mount routes
     this.app.use('/api/auth', authRoutes);
     this.app.use('/api/users', userRoutes);
+    this.app.use('/api/classes', classRoutes);
+    this.app.use('/api/forums', forumRoutes);
+    this.app.use('/api/payments', paymentRoutes);
+    this.app.use('/api/newsletters', newsletterRoutes);
+    this.app.use('/api/reviews', reviewRoutes);
     
-    // TODO: Add other routes here as they are created
-    // this.app.use('/api/classes', classRoutes);
-    // this.app.use('/api/forums', forumRoutes);
-    // this.app.use('/api/payments', paymentRoutes);
-    // this.app.use('/api/newsletters', newsletterRoutes);
-    // this.app.use('/api/reviews', reviewRoutes);
-    
-    // API documentation route placeholder
+    // API documentation route
     this.app.get('/api/docs', (req, res) => {
       res.status(200).json({
         success: true,
-        message: 'API Documentation',
+        message: 'FitStat API Documentation',
+        version: '1.0.0',
         endpoints: {
-          auth: '/api/auth',
-          users: '/api/users',
-          // TODO: Add other endpoints as they are created
-        }
+          authentication: {
+            base: '/api/auth',
+            description: 'User authentication and authorization',
+            endpoints: [
+              'POST /api/auth/register',
+              'POST /api/auth/login',
+              'POST /api/auth/logout',
+              'POST /api/auth/refresh-token',
+              'GET /api/auth/me'
+            ]
+          },
+          users: {
+            base: '/api/users',
+            description: 'User management and trainer operations',
+            endpoints: [
+              'GET /api/users',
+              'GET /api/users/trainers',
+              'POST /api/users/:id/apply',
+              'GET /api/users/applications'
+            ]
+          },
+          classes: {
+            base: '/api/classes',
+            description: 'Fitness class management',
+            endpoints: [
+              'GET /api/classes',
+              'POST /api/classes',
+              'GET /api/classes/popular',
+              'PATCH /api/classes/:id/book'
+            ]
+          },
+          forums: {
+            base: '/api/forums',
+            description: 'Community forum discussions',
+            endpoints: [
+              'GET /api/forums',
+              'POST /api/forums',
+              'PATCH /api/forums/:id/upvote',
+              'GET /api/forums/trending'
+            ]
+          },
+          payments: {
+            base: '/api/payments',
+            description: 'Payment processing and booking',
+            endpoints: [
+              'POST /api/payments/create-payment-intent',
+              'POST /api/payments',
+              'GET /api/payments/my-payments',
+              'POST /api/payments/:id/refund'
+            ]
+          },
+          newsletters: {
+            base: '/api/newsletters',
+            description: 'Newsletter subscription management',
+            endpoints: [
+              'POST /api/newsletters/subscribe',
+              'POST /api/newsletters/unsubscribe',
+              'GET /api/newsletters',
+              'GET /api/newsletters/stats'
+            ]
+          },
+          reviews: {
+            base: '/api/reviews',
+            description: 'User reviews and ratings',
+            endpoints: [
+              'GET /api/reviews',
+              'POST /api/reviews',
+              'GET /api/reviews/class/:classId',
+              'GET /api/reviews/trainer/:trainerEmail'
+            ]
+          }
+        },
+        features: [
+          'JWT Authentication with Role-based Access Control',
+          'Stripe Payment Integration',
+          'Real-time Forum Voting System',
+          'Comprehensive Validation with Joi',
+          'MongoDB with Mongoose ODM',
+          'Rate Limiting and Security Headers',
+          'Centralized Error Handling',
+          'Request Logging and Monitoring',
+          'API Documentation',
+          'Environment-based Configuration'
+        ]
       });
     });
   }
