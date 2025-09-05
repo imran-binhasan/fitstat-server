@@ -150,8 +150,6 @@ const subscriberSchema = new mongoose.Schema({
   timestamps: true
 });
 
-subscriberSchema.index({ email: 1 });
-
 // Payment Model
 const paymentSchema = new mongoose.Schema({
   userEmail: {

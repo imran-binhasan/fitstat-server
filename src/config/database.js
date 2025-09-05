@@ -8,12 +8,14 @@ class DatabaseConfig {
 
   async connect() {
     try {
+      console.log('MONGODB_URI loaded:', !!process.env.MONGODB_URI);
+      console.log('Attempting to connect to MongoDB...');
+      
       const options = {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 45000,
-        bufferCommands: false,
-        bufferMaxEntries: 0,
+        bufferCommands: false
       };
 
       this.connection = await mongoose.connect(process.env.MONGODB_URI, options);
@@ -34,7 +36,8 @@ class DatabaseConfig {
 
       return this.connection;
     } catch (error) {
-      logger.error('❌ MongoDB connection failed:', error);
+      console.log('MongoDB connection error details:', error);
+      logger.error('❌ MongoDB connection failed:', error.message || error);
       process.exit(1);
     }
   }

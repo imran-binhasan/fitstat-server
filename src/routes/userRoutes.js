@@ -1,4 +1,5 @@
 const express = require('express');
+const Joi = require('joi');
 const userController = require('../controllers/userController');
 const { verifyToken, authorize, canApplyForTrainer } = require('../middleware/auth');
 const { 
@@ -55,8 +56,8 @@ router.use(authorize('admin'));
 // User management
 router.get('/', 
   validate(schemas.pagination.keys({
-    role: schemas.pagination.extract('role').optional(),
-    status: schemas.pagination.extract('status').optional()
+    role: Joi.string().valid('member', 'trainer', 'admin').optional(),
+    status: Joi.string().valid('active', 'pending', 'rejected', 'inactive').optional()
   }), 'query'),
   userController.getAllUsers
 );
@@ -88,8 +89,8 @@ router.get('/application/:id',
 router.patch('/application/accept/:id', 
   validateObjectId(),
   validate({
-    status: schemas.userRegistration.extract('status').valid('active').required(),
-    role: schemas.userRegistration.extract('role').valid('trainer').required()
+    status: Joi.string().valid('active').required(),
+    role: Joi.string().valid('trainer').required()
   }),
   userController.approveTrainerApplication
 );
@@ -97,8 +98,8 @@ router.patch('/application/accept/:id',
 router.patch('/application/reject/:id', 
   validateObjectId(),
   validate({
-    status: schemas.userRegistration.extract('status').valid('rejected').required(),
-    feedback: require('joi').string().max(500).required()
+    status: Joi.string().valid('rejected').required(),
+    feedback: Joi.string().max(500).required()
   }),
   userController.rejectTrainerApplication
 );
