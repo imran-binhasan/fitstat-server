@@ -26,7 +26,7 @@ router.get('/',
 
 router.get('/top', 
   validate(schemas.pagination.keys({
-    limit: schemas.pagination.extract('limit').optional()
+    limit: Joi.number().min(1).max(100).optional()
   }), 'query'),
   reviewController.getTopReviews
 );

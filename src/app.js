@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 require('express-async-errors');
 
 const express = require('express');
@@ -19,7 +19,11 @@ const {
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
-// TODO: Import other routes as they are created
+const classRoutes = require('./routes/classRoutes');
+const forumRoutes = require('./routes/forumRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const newsletterRoutes = require('./routes/newsletterRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
 class App {
   constructor() {

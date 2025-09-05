@@ -1,4 +1,5 @@
 const express = require('express');
+const Joi = require('joi');
 const forumController = require('../controllers/forumController');
 const { verifyToken, authorize, optionalAuth } = require('../middleware/auth');
 const { 
@@ -12,25 +13,25 @@ const router = express.Router();
 // Public routes
 router.get('/', 
   validate(schemas.pagination.keys({
-    category: require('joi').string().optional(),
-    search: require('joi').string().optional(),
-    sortBy: require('joi').string().valid('createdAt', 'voteCount', 'viewCount').optional(),
-    sortOrder: require('joi').string().valid('asc', 'desc').optional(),
-    author: require('joi').string().email().optional()
+    category: Joi.string().optional(),
+    search: Joi.string().optional(),
+    sortBy: Joi.string().valid('createdAt', 'voteCount', 'viewCount').optional(),
+    sortOrder: Joi.string().valid('asc', 'desc').optional(),
+    author: Joi.string().email().optional()
   }), 'query'),
   forumController.getAllPosts
 );
 
 router.get('/latest', 
   validate(schemas.pagination.keys({
-    limit: schemas.pagination.extract('limit').optional()
+    limit: Joi.number().min(1).max(100).optional()
   }), 'query'),
   forumController.getLatestPosts
 );
 
 router.get('/trending', 
   validate(schemas.pagination.keys({
-    limit: schemas.pagination.extract('limit').optional()
+    limit: Joi.number().min(1).max(100).optional()
   }), 'query'),
   forumController.getTrendingPosts
 );
@@ -39,7 +40,7 @@ router.get('/categories', forumController.getPostsByCategory);
 
 router.get('/search', 
   validate(schemas.search.keys({
-    q: require('joi').string().required()
+    q: Joi.string().required()
   }), 'query'),
   forumController.searchPosts
 );

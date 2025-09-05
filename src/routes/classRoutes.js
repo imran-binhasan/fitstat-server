@@ -1,4 +1,5 @@
 const express = require('express');
+const Joi = require('joi');
 const classController = require('../controllers/classController');
 const { verifyToken, authorize } = require('../middleware/auth');
 const { 
@@ -19,7 +20,7 @@ router.get('/all', classController.getAllClassesSimple);
 
 router.get('/popular', 
   validate(schemas.pagination.keys({ 
-    limit: schemas.pagination.extract('limit').optional() 
+    limit: Joi.number().min(1).max(100).optional()
   }), 'query'),
   classController.getPopularClasses
 );
@@ -28,7 +29,7 @@ router.get('/categories', classController.getClassesByCategory);
 
 router.get('/search', 
   validate(schemas.search.keys({
-    q: require('joi').string().required()
+    q: Joi.string().required()
   }), 'query'),
   classController.searchClasses
 );
