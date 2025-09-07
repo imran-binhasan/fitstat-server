@@ -4,8 +4,8 @@
 
 ## 🚀 Live Deployment
 
-- **API Base URL:** `https://fitstat-api.up.railway.app` *(Replace with your actual deployment URL)*
-- **Frontend Application:** [https://fistat.vercel.app](https://fistat.vercel.app)
+- **API Base URL:** `https://fitstat-api.up.railway.app`
+- **Frontend Application:** [https://fistat.vercel.app](https://fistat.netlify.app)
 - **API Documentation:** `https://fitstat-api.up.railway.app/api/docs`
 
 ## 🔑 Admin Credentials
